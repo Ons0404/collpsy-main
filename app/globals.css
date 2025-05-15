@@ -4,11 +4,9 @@
 
 @layer utilities {
   .text-balance {
-    text-wrap: balance;
+    text-wrap: balancee;
   }
 }
-
-
 
 @layer base {
   :root {
@@ -65,8 +63,6 @@
     --chart-5: 340 75% 55%;
   }
 }
-
-
 
 @layer base {
   * {
