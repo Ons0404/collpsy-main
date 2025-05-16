@@ -5,6 +5,11 @@ import type {
 } from "../../(mvc)/types/index";
 import { ConsultationStatus, TypeConsultation } from "@prisma/client";
 
+// Helper function to format time for rendezVous
+function formatTimeForRendezVous(date: Date): string {
+  return date.toTimeString().split(" ")[0]; // Returns HH:MM:SS format
+}
+
 export const consultationService = {
   async getStudentConsultations(studentId: number) {
     return prisma.rendezVous.findMany({
@@ -75,21 +80,53 @@ export const consultationService = {
       }
     }
 
+    // Create the base data object
+    const createData = {
+      etudiant: { connect: { id_etudiant: data.etudiantId } },
+      psychologue: {
+        connect: { id_psychologue: Number(data.psychologistId) },
+      },
+      startTime: data.startTime,
+      endTime: data.endTime,
+      type: data.type as TypeConsultation,
+      status: (data.status as ConsultationStatus) || "REQUESTED",
+      notes: data.notes,
+      roomId: data.roomId || generateRoomId(),
+    };
+
+    // If rendezVousId is provided, connect to existing rendezVous
+    if (data.rendezVousId) {
+      return prisma.consultation.create({
+        data: {
+          ...createData,
+          rendezVous: {
+            connect: { id: Number(data.rendezVousId) },
+          },
+        },
+      });
+    }
+
+    // If no rendezVousId, we need to create a new rendezVous first
+    // since the rendezVous relation is required in the schema
+    const newRendezVous = await prisma.rendezVous.create({
+      data: {
+        id_utilisateur: data.etudiantId,
+        id_psychologue: Number(data.psychologistId),
+        date: data.startTime,
+        // Add required fields for RendezVous based on the error message
+        heure_debut: formatTimeForRendezVous(data.startTime),
+        heure_fin: formatTimeForRendezVous(data.endTime),
+        type: data.type, // Using the same type as consultation
+      },
+    });
+
+    // Then create the consultation with the connection to the new rendezVous
     return prisma.consultation.create({
       data: {
-        etudiant: { connect: { id_etudiant: data.etudiantId } },
-        psychologue: {
-          connect: { id_psychologue: Number(data.psychologistId) },
+        ...createData,
+        rendezVous: {
+          connect: { id: newRendezVous.id },
         },
-        startTime: data.startTime,
-        endTime: data.endTime,
-        type: data.type as TypeConsultation,
-        status: (data.status as ConsultationStatus) || "REQUESTED",
-        notes: data.notes,
-        roomId: data.roomId || generateRoomId(),
-        rendezVous: data.rendezVousId
-          ? { connect: { id: Number(data.rendezVousId) } }
-          : undefined,
       },
     });
   },

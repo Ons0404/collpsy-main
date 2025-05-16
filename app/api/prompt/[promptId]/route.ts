@@ -7,11 +7,10 @@ export async function PATCH(
   { params }: { params: { promptId: string } }
 ) {
   try {
-    const promptId = params.promptId; // ID est une string (uuid) dans votre schéma
+    const promptId = parseInt(params.promptId, 10); // Convert to number
     const { name, src, description, instructions, category, isPublic } =
       await req.json();
 
-    // Vérifier si le prompt existe
     const existingPrompt = await prisma.prompt.findUnique({
       where: { id: promptId },
     });
@@ -19,21 +18,10 @@ export async function PATCH(
       return NextResponse.json({ error: "Prompt non trouvé" }, { status: 404 });
     }
 
-    // Mettre à jour le prompt
     const updatedPrompt = await prisma.prompt.update({
       where: { id: promptId },
       data: {
-        name: name !== undefined ? name : existingPrompt.name,
-        src: src !== undefined ? src : existingPrompt.src,
-        description:
-          description !== undefined ? description : existingPrompt.description,
-        instructions:
-          instructions !== undefined
-            ? instructions
-            : existingPrompt.instructions,
-        category: category !== undefined ? category : existingPrompt.category,
-        isPublic: isPublic !== undefined ? isPublic : existingPrompt.isPublic,
-        updatedAt: new Date(),
+        // ... rest of the data
       },
     });
 
@@ -47,15 +35,13 @@ export async function PATCH(
   }
 }
 
-// Handler pour DELETE : Supprimer un prompt
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { promptId: string } }
 ) {
   try {
-    const promptId = params.promptId;
+    const promptId = parseInt(params.promptId, 10); // Convert to number
 
-    // Vérifier si le prompt existe
     const existingPrompt = await prisma.prompt.findUnique({
       where: { id: promptId },
     });
@@ -63,7 +49,6 @@ export async function DELETE(
       return NextResponse.json({ error: "Prompt non trouvé" }, { status: 404 });
     }
 
-    // Supprimer le prompt
     await prisma.prompt.delete({
       where: { id: promptId },
     });

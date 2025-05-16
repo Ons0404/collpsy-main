@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient, Prisma } from "@prisma/client"; // Import Prisma
 import { getServerSession } from "next-auth/next";
 // Adjust the path based on your actual auth options location
-import { authOptions } from "../../(mvc)/lib/auth"; 
+
 
 // Ensure prisma client is correctly initialized and accessible.
 // Using a new instance for now, but centralizing prisma client is recommended.

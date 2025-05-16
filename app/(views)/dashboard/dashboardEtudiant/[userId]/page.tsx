@@ -292,44 +292,47 @@ const DashboardEtudiant: React.FC = () => {
     router.push("/auth/login");
   }, [router]);
 
-   useEffect(() => {
-      const fetchData = async () => {
-        setLoading(true);
-        try {
-          const response = await fetch("/api/auth/me");
-          if (!response.ok) {
-            const errorData = await response.json();
-            console.error("Fetch error:", errorData);
-            if (response.status === 401) {
-              toast({
-                title: "Session expirée",
-                description: "Veuillez vous reconnecter.",
-                variant: "destructive",
-              });
-              handleLogout();
-              return;
-            }
-            throw new Error(
-              errorData.error || "Erreur lors de la récupération des données"
-            ); // Line ~359
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch("/api/auth/me");
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("Fetch error:", errorData);
+          if (response.status === 401) {
+            toast({
+              title: "Session expirée",
+              description: "Veuillez vous reconnecter.",
+              variant: "destructive",
+            });
+            handleLogout();
+            return;
           }
-          const data = await response.json();
-          if (data.user) {
-            setUserData(data.user);
-            // ... additional fetches
-          } else {
-            throw new Error("Données utilisateur non disponibles");
-          }
-        } catch (err) {
-          console.error("Fetch data error:", err); // Line ~364
-          setError(err.message || "Une erreur est survenue.");
-          handleLogout();
-        } finally {
-          setLoading(false);
+          throw new Error(
+            errorData.error || "Erreur lors de la récupération des données"
+          );
         }
-      };
-      fetchData();
-    }, [toast, handleLogout]);
+        const data = await response.json();
+        if (data.user) {
+          setUserData(data.user);
+        } else {
+          throw new Error("Données utilisateur non disponibles");
+        }
+      } catch (err) {
+        console.error("Fetch data error:", err);
+        if (err instanceof Error) {
+          setError(err.message || "Une erreur est survenue.");
+        } else {
+          setError("Une erreur est survenue.");
+        }
+        handleLogout();
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [toast, handleLogout]);
   useEffect(() => {
     const fetchUserDataAndSession = async () => {
       setLoading(true);

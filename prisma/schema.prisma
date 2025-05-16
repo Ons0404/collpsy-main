@@ -12,8 +12,8 @@ model Session {
   userId           Int?
   administrateurId Int?
   expiresAt        DateTime
-  utilisateur      utilisateur?  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  administrateur   Administrateur? @relation(fields: [administrateurId], references: [id], onDelete: Cascade)
+  utilisateur      utilisateur?  @relation(fields: [userId], references: [id_utilisateur], onDelete: Cascade)
+  administrateur   Administrateur? @relation(fields: [administrateurId], references: [id_admin], onDelete: Cascade)
   
   @@map("session")
 }
@@ -22,13 +22,13 @@ model ResetToken {
   token       String      @unique
   expiresAt   DateTime
   userId      Int         @unique
-  utilisateur utilisateur @relation(fields: [userId], references: [id], onDelete: Cascade)
+  utilisateur utilisateur @relation(fields: [userId], references: [id_utilisateur], onDelete: Cascade)
 
   @@map("reset_token")
 }
 
 model utilisateur {
-  id                    Int             @id @default(autoincrement())
+  id_utilisateur                  Int             @id @default(autoincrement())
   nom                   String
   prenom                String
   email                 String          @unique
@@ -45,7 +45,7 @@ model utilisateur {
   avatar                Bytes?
   notifications         Notification[]
   conversations         Conversation[]  @relation("UtilisateurToConversation")
-  aiConversations       AIConversation[]
+
   etudiant              Etudiant?
   psychologue           Psychologue?
   rendezVous            RendezVous[]
@@ -71,7 +71,7 @@ model Reclamation {
   roleUtilisateur String?   // ETUDIANT, PSYCHOLOGUE, ANONYME, etc.
   
   // Relations
-  utilisateur     utilisateur? @relation(fields: [utilisateurId], references: [id], onDelete: SetNull)
+  utilisateur     utilisateur? @relation(fields: [utilisateurId], references: [id_utilisateur], onDelete: SetNull)
   
   @@index([utilisateurId])
   @@index([status])
@@ -90,7 +90,7 @@ model Psychologue {
   photo_diplome     Bytes?
   consultations     Consultation[]
   disponibilites    Disponibilite[]
-  utilisateur       utilisateur     @relation(fields: [id_psychologue], references: [id], onDelete: Cascade)
+  utilisateur       utilisateur     @relation(fields: [id_psychologue], references: [id_utilisateur], onDelete: Cascade)
   rendezVous        RendezVous[]
   rapports          Rapport[]       @relation("PsychologueToRapport")
   conversations     Conversation[]  @relation("PsychologueToConversation")
@@ -103,10 +103,10 @@ model Etudiant {
   numero_carte_etudiant String         @unique
   niveau                String
   etablissement         String
-  utilisateur           utilisateur    @relation(fields: [id_etudiant], references: [id], onDelete: Cascade)
+  utilisateur           utilisateur    @relation(fields: [id_etudiant], references: [id_utilisateur], onDelete: Cascade)
   consultations         Consultation[]
 
-  aiConversations       AIConversation[]
+  
   evaluations           Evaluation[]
   fichesPatients        FichePatient?
   rapports              Rapport[]
@@ -116,7 +116,7 @@ model Etudiant {
 }
 
 model Disponibilite {
-  id             Int              @id @default(autoincrement())
+  id_disponibilite            Int              @id @default(autoincrement())
   id_psychologue Int
   date           DateTime
   heure_debut    String
@@ -129,7 +129,7 @@ model Disponibilite {
 }
 
 model Administrateur {
-  id           Int    @id @default(autoincrement())
+  id_admin          Int    @id @default(autoincrement())
   email        String @unique
   mot_de_passe String
    notifications         Notification[]
@@ -138,7 +138,7 @@ model Administrateur {
 }
 
 model RendezVous {
-  id             Int           @id @default(autoincrement())
+  id_rendezvous          Int           @id @default(autoincrement())
   id_psychologue Int
   id_utilisateur Int
   date           DateTime
@@ -153,7 +153,7 @@ model RendezVous {
   messages       Message[]     @relation("Messages")
   userMessages   UserMessage[]
   psychologue    Psychologue   @relation(fields: [id_psychologue], references: [id_psychologue], onDelete: Cascade)
-  utilisateur    utilisateur   @relation(fields: [id_utilisateur], references: [id], onDelete: Cascade)
+  utilisateur    utilisateur   @relation(fields: [id_utilisateur], references: [id_utilisateur], onDelete: Cascade)
   notifications  Notification[]
 
   @@index([id_psychologue])
@@ -163,7 +163,7 @@ model RendezVous {
 }
 
 model Message {
-  id               String         @id @default(uuid())
+  id_message               String         @id @default(uuid())
   consultationId   Int?
   senderId         Int
   content          String         @db.Text
@@ -173,17 +173,16 @@ model Message {
   conversationId   Int?
   aiConversationId Int?
   isAiMessage      Boolean        @default(false)
-  consultation     Consultation?  @relation(fields: [consultationId], references: [id], onDelete: Cascade)
-  sender           utilisateur    @relation("Messages", fields: [senderId], references: [id], onDelete: Cascade)
-  rendezVous       RendezVous?    @relation("Messages", fields: [rendezVousId], references: [id], onDelete: Cascade)
-  conversation     Conversation?  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  aiConversation   AIConversation? @relation(fields: [aiConversationId], references: [id], onDelete: Cascade)
-
+  consultation     Consultation?  @relation(fields: [consultationId], references: [id_consultation], onDelete: Cascade)
+  sender           utilisateur    @relation("Messages", fields: [senderId], references: [id_utilisateur], onDelete: Cascade)
+  rendezVous       RendezVous?    @relation("Messages", fields: [rendezVousId], references: [id_rendezvous], onDelete: Cascade)
+  conversation     Conversation?  @relation(fields: [conversationId], references: [id_conversation], onDelete: Cascade)
+ 
   @@map("messages")
 }
 
 model UserMessage {
-  id             String        @id @default(uuid())
+  id_usermessage             String        @id @default(uuid())
   senderId       Int
   recipientId    Int
   content        String        @db.Text
@@ -191,26 +190,26 @@ model UserMessage {
   readAt         DateTime?
   conversationId Int?
   rendezVousId   Int?
-  sender         utilisateur   @relation("UserMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
-  recipient      utilisateur   @relation("UserMessageRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
-  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  rendezVous     RendezVous?   @relation(fields: [rendezVousId], references: [id], onDelete: Cascade)
+  sender         utilisateur   @relation("UserMessageSender", fields: [senderId], references: [id_utilisateur], onDelete: Cascade)
+  recipient      utilisateur   @relation("UserMessageRecipient", fields: [recipientId], references: [id_utilisateur], onDelete: Cascade)
+  conversation   Conversation? @relation(fields: [conversationId], references: [id_conversation], onDelete: Cascade)
+  rendezVous     RendezVous?   @relation(fields: [rendezVousId], references: [id_rendezvous], onDelete: Cascade)
   notifications  Notification[]
 
   @@map("user_messages")
 }
 
 model Conversation {
-  id             Int           @id @default(autoincrement())
+  id_conversation             Int           @id @default(autoincrement())
   userId         Int
   psychologistId Int?
   consultationId Int?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
-  utilisateur    utilisateur   @relation("UtilisateurToConversation", fields: [userId], references: [id], onDelete: Cascade)
+  utilisateur    utilisateur   @relation("UtilisateurToConversation", fields: [userId], references: [id_utilisateur], onDelete: Cascade)
   psychologue    Psychologue?  @relation("PsychologueToConversation", fields: [psychologistId], references: [id_psychologue], onDelete: SetNull)
   
-  consultation   Consultation? @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+  consultation   Consultation? @relation(fields: [consultationId], references: [id_consultation], onDelete: Cascade)
   messages       Message[]
   userMessages   UserMessage[]
   notifications  Notification[]
@@ -218,35 +217,13 @@ model Conversation {
   @@map("conversations")
 }
 
-model AIConversation {
-  id            Int         @id @default(autoincrement())
-  userId        Int
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  promptId      Int?        // Added to link AI conversations to prompts
-  etudiantId    Int?
-  messages      Message[]
-  utilisateur   utilisateur @relation(fields: [userId], references: [id], onDelete: Cascade)
-  etudiant      Etudiant?   @relation(fields: [etudiantId], references: [id_etudiant], onDelete: SetNull)
-  prompt        Prompt?     @relation(fields: [promptId], references: [id], onDelete: SetNull)
 
-  @@map("ai_conversations")
-}
 
 // Added Prompt model to support AI conversations
-model Prompt {
-  id              Int             @id @default(autoincrement())
-  title           String
-  content         String          @db.Text
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  aiConversations AIConversation[]
 
-  @@map("prompts")
-}
 
 model Consultation {
-  id             Int                @id @default(autoincrement())
+  id_consultation             Int                @id @default(autoincrement())
   etudiantId     Int
   psychologueId  Int
   status         ConsultationStatus
@@ -262,8 +239,8 @@ model Consultation {
   rendezVousId   Int                @unique
   etudiant       Etudiant           @relation(fields: [etudiantId], references: [id_etudiant], onDelete: Cascade)
   psychologue    Psychologue        @relation(fields: [psychologueId], references: [id_psychologue], onDelete: Cascade)
-  fichePatient   FichePatient?      @relation(fields: [fichePatientId], references: [id], onDelete: SetNull)
-  rendezVous     RendezVous         @relation(fields: [rendezVousId], references: [id], onDelete: Cascade)
+  fichePatient   FichePatient?      @relation(fields: [fichePatientId], references: [id_fiche], onDelete: SetNull)
+  rendezVous     RendezVous         @relation(fields: [rendezVousId], references: [id_rendezvous], onDelete: Cascade)
   conversations  Conversation[]
   evaluations    Evaluation[]
   messages       Message[]
@@ -272,7 +249,7 @@ model Consultation {
 }
 
 model FichePatient {
-  id                        String         @id @default(uuid())
+  id_fiche                        String         @id @default(uuid())
   etudiantId                Int            @unique
   createdAt                 DateTime       @default(now())
   updatedAt                 DateTime       @updatedAt
@@ -292,7 +269,7 @@ model FichePatient {
 }
 
 model Evaluation {
-  id             String       @id @default(uuid())
+  id_evaluation             String       @id @default(uuid())
   consultationId Int
   etudiantId     Int
   satisfaction   Int          @default(0)
@@ -303,14 +280,14 @@ model Evaluation {
   commentaires   String?      @db.Text
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-  consultation   Consultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+  consultation   Consultation @relation(fields: [consultationId], references: [id_consultation], onDelete: Cascade)
   etudiant       Etudiant     @relation(fields: [etudiantId], references: [id_etudiant], onDelete: Cascade)
 
   @@map("evaluations")
 }
 
 model TestPsychologique {
-  id           String         @id @default(uuid())
+  id_test           String         @id @default(uuid())
   titre        String
   description  String?        @db.Text
   categorie    CategorieTest
@@ -325,12 +302,12 @@ model TestPsychologique {
 }
 
 model Question {
-  id                  String               @id @default(uuid())
+  id_question                  String               @id @default(uuid())
   testId              String
   texte               String               @db.Text
   ordre               Int
   type                TypeQuestion
-  test                TestPsychologique    @relation(fields: [testId], references: [id], onDelete: Cascade)
+  test                TestPsychologique    @relation(fields: [testId], references: [id_test], onDelete: Cascade)
   optionsReponse      OptionReponse[]
   reponsesUtilisateur ReponseUtilisateur[]
 
@@ -338,47 +315,47 @@ model Question {
 }
 
 model OptionReponse {
-  id         String               @id @default(uuid())
+  id_option         String               @id @default(uuid())
   questionId String
   texte      String
   valeur     Int
-  question   Question             @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  question   Question             @relation(fields: [questionId], references: [id_question], onDelete: Cascade)
   reponses   ReponseUtilisateur[]
 
   @@map("options_reponse")
 }
 
 model ResultatTest {
-  id             String               @id @default(uuid())
+  id_resultat             String               @id @default(uuid())
   testId         String
   etudiantId     Int
   score          Int
   interpretation String?              @db.Text
   datePassation  DateTime             @default(now())
   rapportId      String?
-  test           TestPsychologique    @relation(fields: [testId], references: [id], onDelete: Cascade)
+  test           TestPsychologique    @relation(fields: [testId], references: [id_test], onDelete: Cascade)
   etudiant       Etudiant             @relation(fields: [etudiantId], references: [id_etudiant], onDelete: Cascade)
-  rapport        Rapport?             @relation("RapportToResultatTest", fields: [rapportId], references: [id], onDelete: SetNull)
+  rapport        Rapport?             @relation("RapportToResultatTest", fields: [rapportId], references: [id_rapport], onDelete: SetNull)
   reponses       ReponseUtilisateur[]
 
   @@map("resultats_test")
 }
 
 model ReponseUtilisateur {
-  id         String         @id @default(uuid())
+  id_response         String         @id @default(uuid())
   resultatId String
   questionId String
   optionId   String?
   texteLibre String?        @db.Text
-  resultat   ResultatTest   @relation(fields: [resultatId], references: [id], onDelete: Cascade)
-  question   Question       @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  option     OptionReponse? @relation(fields: [optionId], references: [id], onDelete: SetNull)
+  resultat   ResultatTest   @relation(fields: [resultatId], references: [id_resultat], onDelete: Cascade)
+  question   Question       @relation(fields: [questionId], references: [id_question], onDelete: Cascade)
+  option     OptionReponse? @relation(fields: [optionId], references: [id_option], onDelete: SetNull)
 
   @@map("reponses_utilisateur")
 }
 
 model Rapport {
-  id             String         @id @default(dbgenerated("gen_random_uuid()"))
+  id_rapport             String         @id @default(dbgenerated("gen_random_uuid()"))
   etudiantId     Int
   psychologueId  Int?
   titre          String
@@ -395,18 +372,18 @@ model Rapport {
 }
 
 model RapportEntry {
-  id               String    @id @default(dbgenerated("gen_random_uuid()"))
+  id_rapportEn               String    @id @default(dbgenerated("gen_random_uuid()"))
   rapportId        String
   dateconsultation DateTime
   resume           String?   @db.Text
   observations     String?   @db.Text
-  rapport          Rapport   @relation("RapportToRapportEntry", fields: [rapportId], references: [id], onDelete: Cascade)
+  rapport          Rapport   @relation("RapportToRapportEntry", fields: [rapportId], references: [id_rapport], onDelete: Cascade)
 
   @@map("rapport_entry")
 }
 
 model Notification {
-  id             Int           @id @default(autoincrement())
+  id_notification             Int           @id @default(autoincrement())
   userId         Int
   message        String        @db.Text
   date           DateTime      @default(now())
@@ -414,12 +391,12 @@ model Notification {
   userMessageId  String?
   rendezVousId   Int?
   conversationId Int?
-  user           utilisateur   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userMessage    UserMessage?  @relation(fields: [userMessageId], references: [id], onDelete: Cascade)
-  rendezVous     RendezVous?   @relation(fields: [rendezVousId], references: [id], onDelete: Cascade)
-  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           utilisateur   @relation(fields: [userId], references: [id_utilisateur], onDelete: Cascade)
+  userMessage    UserMessage?  @relation(fields: [userMessageId], references: [id_usermessage], onDelete: Cascade)
+  rendezVous     RendezVous?   @relation(fields: [rendezVousId], references: [id_rendezvous], onDelete: Cascade)
+  conversation   Conversation? @relation(fields: [conversationId], references: [id_conversation], onDelete: Cascade)
   administrateurId Int?
-  administrateur  Administrateur? @relation(fields: [administrateurId], references: [id], onDelete: SetNull)
+  administrateur  Administrateur? @relation(fields: [administrateurId], references: [id_admin], onDelete: SetNull)
 
   @@index([userMessageId])
   @@index([rendezVousId])
