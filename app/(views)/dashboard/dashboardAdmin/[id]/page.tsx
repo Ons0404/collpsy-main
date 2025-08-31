@@ -11,6 +11,7 @@ import {
   Bell,
   Moon,
   Sun,
+  AlertCircle,
 } from "lucide-react";
 
 import AdminCharts from "../../../../components/AdminCharts";
@@ -71,10 +72,31 @@ interface Notification {
   read: boolean;
 }
 
+// Interface for a reclamation
+interface Reclamation {
+  id: number;
+  categorie: string;
+  description: string;
+  isUrgent: boolean;
+  pieceJointe?: string | null;
+  utilisateurId: number;
+  roleUtilisateur: string;
+  dateCreation: string;
+  status?: string;
+}
+
 const AdminDashboard = () => {
   const [accounts, setAccounts] = useState<UserAccount[]>([]);
+  const [reclamations, setReclamations] = useState<Reclamation[]>([]);
+  const [selectedReclamation, setSelectedReclamation] =
+    useState<Reclamation | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [reclamationsLoading, setReclamationsLoading] =
+    useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [reclamationsError, setReclamationsError] = useState<string | null>(
+    null
+  );
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeSection, setActiveSection] = useState("dashboard");
   const [showNotifications, setShowNotifications] = useState(false);
@@ -123,9 +145,41 @@ const AdminDashboard = () => {
       throw error;
     }
   }
+
+  // Fetch all reclamations
+  const fetchReclamations = async () => {
+    setReclamationsLoading(true);
+    setReclamationsError(null);
+    try {
+      const res = await fetch("/api/reclamations/admin", {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        throw new Error("Erreur lors de la récupération des réclamations");
+      }
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setReclamations(
+          data.map((item: any) => ({
+            ...item,
+            dateCreation: new Date(item.dateCreation).toLocaleString(),
+          }))
+        );
+      } else {
+        throw new Error("Les données récupérées ne sont pas valides");
+      }
+    } catch (error: any) {
+      console.error("Erreur fetchReclamations:", error);
+      setReclamationsError("Impossible de récupérer les réclamations.");
+    } finally {
+      setReclamationsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchMe();
   }, []);
+
   useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date();
@@ -267,6 +321,7 @@ const AdminDashboard = () => {
     if (user) {
       fetchAccounts();
       fetchNotifications();
+      fetchReclamations();
     }
     const handleResize = () => {
       if (window.innerWidth < 768) {
@@ -591,6 +646,17 @@ const AdminDashboard = () => {
                 )}
               </button>
             </li>
+            <li>
+              <button
+                onClick={() => setActiveSection("reclamations")}
+                className={sidebarButtonClass("reclamations")}
+              >
+                <AlertCircle className="h-5 w-5" />
+                {!sidebarCollapsed && (
+                  <span className="ml-4">Réclamations</span>
+                )}
+              </button>
+            </li>
           </ul>
 
           {!sidebarCollapsed && (
@@ -812,6 +878,7 @@ const AdminDashboard = () => {
               {activeSection === "users" && "Gestion des utilisateurs"}
               {activeSection === "analytics" && "Statistiques avancées"}
               {activeSection === "profile" && "Mon Profil"}
+              {activeSection === "reclamations" && "Gestion des réclamations"}
             </h1>
             <p
               className={`text-sm mt-1 ${
@@ -826,16 +893,13 @@ const AdminDashboard = () => {
                 "Analyses détaillées et métriques"}
               {activeSection === "profile" &&
                 "Gérer vos informations personnelles"}
+              {activeSection === "reclamations" &&
+                "Consulter et gérer les réclamations des utilisateurs"}
             </p>
           </div>
 
-        
           {activeSection === "dashboard" && (
             <div className="space-y-8">
-              {/* Résumé général */}
-             
-
-              {/* Statistiques principales */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="animate-fade-in">
                   <GrowthRateCard darkMode={darkMode} />
@@ -848,7 +912,6 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              {/* Statistiques secondaires */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="animate-fade-in animation-delay-300">
                   <UserActivityCard darkMode={darkMode} />
@@ -858,7 +921,6 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              {/* Graphiques détaillés */}
               <div className="mt-6">
                 <h2
                   className={`text-lg font-semibold mb-4 ${
@@ -870,7 +932,6 @@ const AdminDashboard = () => {
                 <AdminCharts darkMode={darkMode} />
               </div>
 
-              {/* Tableau des comptes en attente */}
               <div
                 className={`${
                   darkMode
@@ -884,14 +945,12 @@ const AdminDashboard = () => {
                   </h2>
                   <button
                     onClick={fetchAccounts}
-                    
                     className={`px-4 py-2 ${
                       darkMode
                         ? "bg-blue-700 text-blue-200 hover:bg-blue-600"
                         : "bg-blue-100 text-blue-700 hover:bg-blue-200"
                     } rounded-lg transition-colors text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-300`}
                   >
-                    
                     Rafraîchir
                   </button>
                 </div>
@@ -976,7 +1035,6 @@ const AdminDashboard = () => {
                         : "border-gray-300 bg-white text-gray-800"
                     } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300`}
                     onChange={(e) => {
-                      // Logique pour filtrer par période (ex. : dernier mois, trimestre)
                       console.log("Période sélectionnée:", e.target.value);
                     }}
                   >
@@ -991,7 +1049,6 @@ const AdminDashboard = () => {
                         : "border-gray-300 bg-white text-gray-800"
                     } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300`}
                     onChange={(e) => {
-                      // Logique pour filtrer par type de données (ex. : utilisateurs, consultations)
                       console.log("Type sélectionné:", e.target.value);
                     }}
                   >
@@ -1239,6 +1296,279 @@ const AdminDashboard = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          )}
+
+          {activeSection === "reclamations" && (
+            <div
+              className={`${
+                darkMode
+                  ? "bg-gray-800 text-gray-200"
+                  : "bg-white text-gray-800"
+              } shadow-sm rounded-xl p-6 space-y-6`}
+            >
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-semibold">
+                  Liste des réclamations
+                </h2>
+                <button
+                  onClick={fetchReclamations}
+                  className={`px-4 py-2 ${
+                    darkMode
+                      ? "bg-blue-700 text-blue-200 hover:bg-blue-600"
+                      : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                  } rounded-lg transition-colors text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-300`}
+                >
+                  Rafraîchir
+                </button>
+              </div>
+
+              {reclamationsLoading && (
+                <div className="flex justify-center items-center h-40">
+                  <div
+                    className={`animate-spin rounded-full h-8 w-8 border-b-2 ${
+                      darkMode ? "border-blue-300" : "border-blue-400"
+                    }`}
+                  ></div>
+                </div>
+              )}
+
+              {reclamationsError && (
+                <div
+                  className={`${
+                    darkMode
+                      ? "bg-red-800 text-red-300"
+                      : "bg-red-50 text-red-700"
+                  } p-4 rounded-lg mb-4 flex items-start`}
+                >
+                  <svg
+                    className="w-5 h-5 mr-2 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    ></path>
+                  </svg>
+                  <span>{reclamationsError}</span>
+                </div>
+              )}
+
+              {!reclamationsLoading &&
+              !reclamationsError &&
+              reclamations.length === 0 ? (
+                <div
+                  className={`text-center py-12 ${
+                    darkMode ? "text-gray-400" : "text-gray-500"
+                  }`}
+                >
+                  <AlertCircle
+                    className={`w-12 h-12 mx-auto ${
+                      darkMode ? "text-gray-600" : "text-gray-300"
+                    } mb-4`}
+                  />
+                  <p>Aucune réclamation disponible.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr
+                            className={`${
+                              darkMode
+                                ? "bg-gray-700 text-gray-300"
+                                : "bg-gray-100 text-gray-700"
+                            }`}
+                          >
+                            <th className="p-3 text-left">Catégorie</th>
+                            <th className="p-3 text-left">Description</th>
+                            <th className="p-3 text-left">Urgent</th>
+                            <th className="p-3 text-left">Date</th>
+                            <th className="p-3 text-left">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {reclamations.map((reclamation) => (
+                            <tr
+                              key={reclamation.id}
+                              className={`border-b ${
+                                darkMode
+                                  ? "border-gray-700 hover:bg-gray-700"
+                                  : "border-gray-200 hover:bg-gray-50"
+                              } cursor-pointer`}
+                              onClick={() =>
+                                setSelectedReclamation(reclamation)
+                              }
+                            >
+                              <td className="p-3">{reclamation.categorie}</td>
+                              <td className="p-3">
+                                {reclamation.description.substring(0, 50)}...
+                              </td>
+                              <td className="p-3">
+                                {reclamation.isUrgent ? (
+                                  <span
+                                    className={`px-2 py-1 text-xs rounded-full ${
+                                      darkMode
+                                        ? "bg-red-700 text-red-200"
+                                        : "bg-red-100 text-red-700"
+                                    }`}
+                                  >
+                                    Urgent
+                                  </span>
+                                ) : (
+                                  "-"
+                                )}
+                              </td>
+                              <td className="p-3">
+                                {reclamation.dateCreation}
+                              </td>
+                              <td className="p-3">
+                                <button
+                                  onClick={() =>
+                                    setSelectedReclamation(reclamation)
+                                  }
+                                  className={`text-sm ${
+                                    darkMode
+                                      ? "text-blue-400 hover:text-blue-300"
+                                      : "text-blue-500 hover:text-blue-700"
+                                  }`}
+                                >
+                                  Voir détails
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div>
+                    {selectedReclamation ? (
+                      <div
+                        className={`p-6 rounded-xl ${
+                          darkMode
+                            ? "bg-gray-700 text-gray-200"
+                            : "bg-white text-gray-800"
+                        } shadow-sm`}
+                      >
+                        <h3 className="text-lg font-semibold mb-4">
+                          Détails de la réclamation
+                        </h3>
+                        <div className="space-y-4">
+                          <div>
+                            <label
+                              className={`block text-sm font-medium ${
+                                darkMode ? "text-gray-300" : "text-gray-700"
+                              }`}
+                            >
+                              Catégorie
+                            </label>
+                            <p>{selectedReclamation.categorie}</p>
+                          </div>
+                          <div>
+                            <label
+                              className={`block text-sm font-medium ${
+                                darkMode ? "text-gray-300" : "text-gray-700"
+                              }`}
+                            >
+                              Description
+                            </label>
+                            <p>{selectedReclamation.description}</p>
+                          </div>
+                          <div>
+                            <label
+                              className={`block text-sm font-medium ${
+                                darkMode ? "text-gray-300" : "text-gray-700"
+                              }`}
+                            >
+                              Urgent
+                            </label>
+                            <p>
+                              {selectedReclamation.isUrgent ? "Oui" : "Non"}
+                            </p>
+                          </div>
+                          <div>
+                            <label
+                              className={`block text-sm font-medium ${
+                                darkMode ? "text-gray-300" : "text-gray-700"
+                              }`}
+                            >
+                              Date de création
+                            </label>
+                            <p>{selectedReclamation.dateCreation}</p>
+                          </div>
+                          <div>
+                            <label
+                              className={`block text-sm font-medium ${
+                                darkMode ? "text-gray-300" : "text-gray-700"
+                              }`}
+                            >
+                              Rôle de l'utilisateur
+                            </label>
+                            <p>{selectedReclamation.roleUtilisateur}</p>
+                          </div>
+                          <div>
+                            <label
+                              className={`block text-sm font-medium ${
+                                darkMode ? "text-gray-300" : "text-gray-700"
+                              }`}
+                            >
+                              Pièce jointe
+                            </label>
+                            {selectedReclamation.pieceJointe ? (
+                              <a
+                                href={`/uploads/${selectedReclamation.pieceJointe}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`text-sm ${
+                                  darkMode
+                                    ? "text-blue-400 hover:text-blue-300"
+                                    : "text-blue-500 hover:text-blue-700"
+                                }`}
+                              >
+                                Télécharger
+                              </a>
+                            ) : (
+                              <p>Aucune pièce jointe</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mt-6">
+                          <button
+                            onClick={() => setSelectedReclamation(null)}
+                            className={`px-4 py-2 ${
+                              darkMode
+                                ? "bg-gray-600 text-gray-200 hover:bg-gray-500"
+                                : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                            } rounded-lg transition-colors text-sm font-medium`}
+                          >
+                            Fermer
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className={`p-6 rounded-xl ${
+                          darkMode
+                            ? "bg-gray-700 text-gray-300"
+                            : "bg-white text-gray-600"
+                        } shadow-sm text-center`}
+                      >
+                        <p>
+                          Sélectionnez une réclamation pour voir les détails
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

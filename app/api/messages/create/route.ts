@@ -1,61 +1,60 @@
 import { NextResponse } from "next/server";
-import  prisma  from "../../../(mvc)/lib/prisma";
+import prisma from "../../../(mvc)/lib/prisma"; // Adjust based on your Prisma export
 
 export async function POST(request: Request) {
   try {
-    const { userId, etudiantId, rendezVousId, consultationId } =
-      await request.json();
+    const { etudiantId, psychologistId, content } = await request.json();
 
-    if (!userId || !etudiantId) {
-      return NextResponse.json(
-        { error: "userId et etudiantId sont requis" },
-        { status: 400 }
-      );
-    }
-
-    // Vérifier si une conversation existe déjà
-    const existingConversation = await prisma.conversation.findFirst({
+    // Find the utilisateur associated with the Etudiant
+    const utilisateur = await prisma.utilisateur.findFirst({
       where: {
-        userId,
-        etudiantId,
+        etudiant: {
+          id_etudiant: etudiantId,
+        },
       },
     });
 
-    if (existingConversation) {
+    if (!utilisateur) {
       return NextResponse.json(
-        { error: "Une conversation existe déjà" },
-        { status: 409 }
+        { error: "Utilisateur not found for Etudiant" },
+        { status: 404 }
       );
     }
 
-    // Créer une nouvelle conversation
-    const conversation = await prisma.conversation.create({
-      data: {
-        userId,
-        etudiantId,
-        consultationId,
-        createdAt: new Date(),
+    // Find existing conversation
+    let conversation = await prisma.conversation.findFirst({
+      where: {
+        userId: utilisateur.id,
+        psychologistId: psychologistId,
       },
     });
 
-    // Créer une notification pour l'étudiant
-    const psychologue = await prisma.utilisateur.findUnique({
-      where: { id: userId },
-    });
+    // Create conversation if it doesn't exist
+    if (!conversation) {
+      conversation = await prisma.conversation.create({
+        data: {
+          userId: utilisateur.id,
+          psychologistId: psychologistId,
+        },
+      });
+    }
 
-    await prisma.notification.create({
+    // Create the message
+    const message = await prisma.message.create({
       data: {
-        userId: etudiantId,
-        message: `Une nouvelle conversation a été initiée par ${psychologue?.prenom} ${psychologue?.nom}`,
-        date: new Date(),
-        read: false,
+        senderId: utilisateur.id,
+        content: content,
         conversationId: conversation.id,
+        sentAt: new Date(),
       },
     });
 
-    return NextResponse.json(conversation, { status: 201 });
+    return NextResponse.json({ message }, { status: 201 });
   } catch (error) {
-    console.error("Erreur lors de la création de la conversation:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    console.error("Error creating message:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

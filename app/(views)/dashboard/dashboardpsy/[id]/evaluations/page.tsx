@@ -245,17 +245,17 @@ export default function EvaluationsPage() {
       </div>
     );
 
-  if (error)
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Alert variant="destructive  border border-red-600">
-          <AlertCircle className="h-4 w-4 text-red-600" />
-          <AlertDescription className="text-red-600">
-            Erreur: {error}
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
+    if (error)
+      return (
+        <div className="container mx-auto px-4 py-8">
+          <Alert variant="destructive" className="border border-red-600">
+            <AlertCircle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-600">
+              Erreur: {error}
+            </AlertDescription>
+          </Alert>
+        </div>
+      );
 
   if (!userData) return null;
 
